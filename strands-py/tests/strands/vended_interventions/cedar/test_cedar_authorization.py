@@ -546,6 +546,20 @@ class TestOnError:
         cedar = CedarAuthorization(policies="permit(principal, action, resource);", on_error="proceed")
         assert cedar.on_error == "proceed"
 
+    def test_on_error_proceed_does_not_weaken_engine_fail_closed(self):
+        """on_error='proceed' governs user callbacks only; Cedar engine failures stay denied."""
+        from unittest.mock import patch
+
+        import cedarpy
+
+        cedar = CedarAuthorization(policies="permit(principal, action, resource);", on_error="proceed")
+
+        with patch.object(cedarpy, "is_authorized", side_effect=RuntimeError("wasm panic")):
+            result = cedar.before_tool_call(_make_event("search"))
+
+        assert result.type == "deny"
+        assert "Cedar evaluation failed" in result.reason
+
 
 class TestReload:
     def test_reload_from_file(self, tmp_path):

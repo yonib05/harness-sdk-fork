@@ -118,7 +118,19 @@ class CedarAuthorization(InterventionHandler):
             principal: Static principal identity.
             principal_resolver: Dynamic principal resolver from invocation_state.
             context_enricher: Callback to inject extra fields into context.session.
-            on_error: Error handling mode for user callback exceptions.
+            on_error: How to handle exceptions raised by the user-supplied ``principal_resolver``
+                or ``context_enricher`` callbacks. Defaults to ``"throw"``.
+
+                - ``"throw"`` (default, fail-closed): re-raise the exception so the tool call does
+                  not run.
+                - ``"deny"`` (fail-closed): treat the callback failure as a denial.
+                - ``"proceed"`` (fail-open): log the error and allow the tool call to run as if the
+                  handler returned ``Proceed``. **This disables authorization enforcement whenever
+                  a callback fails.** Only use it where availability matters more than enforcement,
+                  never in security-sensitive contexts.
+
+                This setting does not affect Cedar engine failures (malformed policies, evaluation
+                errors): those are always denied regardless of ``on_error``.
         """
         if principal and principal_resolver:
             raise ValueError("Provide either `principal` or `principal_resolver`, not both")
